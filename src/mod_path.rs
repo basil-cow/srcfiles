@@ -50,20 +50,24 @@ impl ModStack {
     }
 
     fn get_mod_path_candidates(&self) -> Vec<ModPath> {
+        if self.0.is_empty() {
+            return vec![];
+        }
+
         let mut path = PathBuf::new();
 
-        for i in &self.0[..self.0.len() - 1] {
-            match i {
+        for i in 0..self.0.len() - 1 {
+            match &self.0[i] {
                 ModSegment::Ident(ident) => path.push(ident.to_string()),
                 ModSegment::InlinePath(inline_path) => path.push(inline_path),
-                ModSegment::ModPath(mod_path) => match mod_path.mod_type {
-                    ModType::Adjacent => {
-                        path.push(mod_path.path.parent().unwrap());
-                        path.push(mod_path.path.file_name().unwrap());
+                ModSegment::ModPath(mod_path) => {
+                    path.push(mod_path.path.parent().unwrap());
+                    if let (ModSegment::Ident(_), ModType::Adjacent) =
+                        (&self.0[i + 1], mod_path.mod_type)
+                    {
+                        path.push(mod_path.path.file_stem().unwrap());
                     }
-
-                    ModType::ModRs => path.push(mod_path.path.parent().unwrap()),
-                },
+                }
             }
         }
 

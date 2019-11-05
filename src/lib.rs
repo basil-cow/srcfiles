@@ -10,12 +10,12 @@ use std::path::{Path, PathBuf};
 
 use syn::visit::Visit;
 
-pub use error::Unresolved;
+pub use error::{SrcError, Unresolved};
 pub use mod_path::ModPath;
 pub use source_desc::{ModType, SourceFileDesc, SourceFileType};
 use visitor::SourceFinder;
 
-use error::{Error, Result};
+use error::Result;
 
 fn propagate_parent_file(path: &Path, source_descs_slice: &mut [SourceFileDesc]) {
     for source_desc in source_descs_slice {
@@ -54,11 +54,11 @@ pub fn process_source(source: &SourceFileDesc) -> Result<(Vec<SourceFileDesc>, V
     Ok(visit_source(&source.path, source_finder)?)
 }
 
-pub fn crate_srcfiles(path: PathBuf) -> (Vec<SourceFileDesc>, Vec<Error>) {
+pub fn crate_srcfiles(path: PathBuf) -> (Vec<SourceFileDesc>, Vec<SrcError>) {
     mod_srcfiles(ModPath::new(path, ModType::ModRs))
 }
 
-pub fn mod_srcfiles(mod_path: ModPath) -> (Vec<SourceFileDesc>, Vec<Error>) {
+pub fn mod_srcfiles(mod_path: ModPath) -> (Vec<SourceFileDesc>, Vec<SrcError>) {
     let mut source_queue = Vec::with_capacity(100);
     let mut srcfiles = Vec::with_capacity(100);
     let mut errors = Vec::with_capacity(100);
@@ -73,10 +73,15 @@ pub fn mod_srcfiles(mod_path: ModPath) -> (Vec<SourceFileDesc>, Vec<Error>) {
         match process_source(&source) {
             Ok((sources, src_errors)) => {
                 source_queue.extend(sources);
+                errors.extend(
+                    src_errors
+                        .into_iter()
+                        .map(Into::into)
+                        .map(|err| SrcError::new(source.path.clone(), err)),
+                );
                 srcfiles.push(source);
-                errors.extend(src_errors.into_iter().map(Into::into));
             }
-            Err(err) => errors.push(err),
+            Err(err) => errors.push(SrcError::new(source.path, err)),
         }
     }
 

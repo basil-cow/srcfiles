@@ -72,7 +72,12 @@ impl<'ast> Visit<'ast> for SourceFinder {
         }
 
         let path: PathBuf = match node.parse_body::<LitStr>() {
-            Ok(path) => self.mod_stack.parent_file_path().join(path.value()),
+            Ok(path) => self
+                .mod_stack
+                .parent_file_path()
+                .parent()
+                .unwrap()
+                .join(path.value()),
             Err(_) => {
                 self.unresolved_items
                     .push(Unresolved::IncludeArgument(node.to_token_string()));

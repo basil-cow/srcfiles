@@ -1,5 +1,5 @@
 use crate::source_desc::SourceFileDesc;
-use std::fmt;
+use std::{fmt, path::PathBuf};
 
 #[derive(Debug, Clone)]
 pub enum Unresolved {
@@ -13,6 +13,18 @@ pub enum Error {
     Syn(syn::Error),
     IO(std::io::Error),
     Unresolved(Unresolved),
+}
+
+#[derive(Debug)]
+pub struct SrcError {
+    file: PathBuf,
+    error: Error,
+}
+
+impl SrcError {
+    pub fn new(file: PathBuf, error: Error) -> Self {
+        Self { file, error }
+    }
 }
 
 impl fmt::Display for Unresolved {
