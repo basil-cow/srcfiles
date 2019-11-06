@@ -17,8 +17,8 @@ pub enum Error {
 
 #[derive(Debug)]
 pub struct SrcError {
-    file: PathBuf,
-    error: Error,
+    pub file: PathBuf,
+    pub error: Error,
 }
 
 impl SrcError {
