@@ -9,7 +9,7 @@ fn assert_has_source(srcfiles: &[SourceFileDesc], path: &str) {
             .iter()
             .any(|desc| desc.path.canonicalize().unwrap()
                 == PathBuf::from(path).canonicalize().unwrap()),
-        format!("No source with path {} present", path)
+        format!("No source with path {}", path)
     );
 }
 
@@ -26,7 +26,7 @@ fn assert_missing_files(srcfiles: &[SrcError], path: &str) {
                 }
             )
             .any(|desc| desc.path == PathBuf::from(path)),
-        format!("No missing file with path {} present", path)
+        format!("No missing file with path {}", path)
     );
 }
 
@@ -68,4 +68,30 @@ fn path_attr_test() {
     assert_missing_files(&errors, "test_projects/paths/src/../src/b/c.rs");
     assert_missing_files(&errors, "test_projects/paths/src/../src/b/c/mod.rs");
     assert_missing_files(&errors, "test_projects/paths/src/../g/../src/f.rs");
+}
+
+#[test]
+fn inline_mods_test() {
+    let (srcfiles, errors) =
+        srcfiles::crate_srcfiles(PathBuf::from("test_projects/inline/src/lib.rs"));
+    assert_eq!(srcfiles.len(), 5);
+    assert_has_source(&srcfiles, "test_projects/inline/src/lib.rs");
+    assert_has_source(&srcfiles, "test_projects/inline/g/mod.rs");
+    assert_has_source(&srcfiles, "test_projects/inline/g/h.rs");
+    assert_has_source(&srcfiles, "test_projects/inline/src/a/c/d/mod.rs");
+    assert_has_source(&srcfiles, "test_projects/inline/src/a/c/e/e/e.rs");
+    assert_eq!(errors.len(), 0);
+}
+
+#[test]
+fn include_test() {
+    let (srcfiles, errors) =
+        srcfiles::crate_srcfiles(PathBuf::from("test_projects/inline/src/lib.rs"));
+    assert_eq!(srcfiles.len(), 5);
+    assert_has_source(&srcfiles, "test_projects/inline/src/lib.rs");
+    assert_has_source(&srcfiles, "test_projects/inline/g/mod.rs");
+    assert_has_source(&srcfiles, "test_projects/inline/g/h.rs");
+    assert_has_source(&srcfiles, "test_projects/inline/src/a/c/d/mod.rs");
+    assert_has_source(&srcfiles, "test_projects/inline/src/a/c/e/e/e.rs");
+    assert_eq!(errors.len(), 0);
 }
