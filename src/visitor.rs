@@ -55,21 +55,14 @@ impl<'ast> Visit<'ast> for SourceFinder {
     }
 
     fn visit_macro(&mut self, node: &'ast Macro) {
-        fn get_source_type(visitor: &SourceFinder, macro_ident: &str) -> SourceFileType {
-            match macro_ident {
-                "include_str" => SourceFileType::String,
-                "include_bytes" => SourceFileType::Bytes,
-                "include" => SourceFileType::RustSnippet(visitor.mod_stack.clone()),
-                _ => unreachable!(),
-            }
-        }
-
         let macro_ident = node.path.segments.last().unwrap().ident.to_string();
 
-        match macro_ident.as_str() {
-            "include_str" | "include_bytes" | "include" => (),
+        let source_type = match macro_ident.as_str() {
+            "include_str" => SourceFileType::String,
+            "include_bytes" => SourceFileType::Bytes,
+            "include" => SourceFileType::RustSnippet(self.mod_stack.clone()),
             _ => return,
-        }
+        };
 
         let path: PathBuf = match node.parse_body::<LitStr>() {
             Ok(path) => self
@@ -85,7 +78,7 @@ impl<'ast> Visit<'ast> for SourceFinder {
             }
         };
 
-        let source_file_desc = SourceFileDesc::new(path, get_source_type(self, &macro_ident), None);
+        let source_file_desc = SourceFileDesc::new(path, source_type, None);
 
         if source_file_desc.path.is_file() {
             self.source_candidates.push(source_file_desc);
