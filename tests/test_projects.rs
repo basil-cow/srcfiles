@@ -1,6 +1,6 @@
 use srcfiles;
 
-use srcfiles::{error::Error, SourceError, SourceFileDesc, Unresolved};
+use srcfiles::{error::Error, SourceError, SourceFileDesc};
 use std::path::PathBuf;
 
 fn assert_has_source(srcfiles: &[SourceFileDesc], path: &str) {
@@ -18,13 +18,11 @@ fn assert_missing_files(srcfiles: &[SourceError], path: &str) {
         srcfiles
             .iter()
             .map(|src_err| &src_err.error)
-            .flat_map(
-                |err| if let Error::Unresolved(Unresolved::MissingFile(desc)) = err {
-                    Some(desc)
-                } else {
-                    None
-                }
-            )
+            .flat_map(|err| if let Error::MissingFile(desc) = err {
+                Some(desc)
+            } else {
+                None
+            })
             .any(|desc| desc.path == PathBuf::from(path)),
         format!("No missing file with path {}", path)
     );

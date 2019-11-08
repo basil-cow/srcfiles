@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 use syn::visit::Visit;
 
-pub use error::{SourceError, Unresolved};
+pub use error::{Error, SourceError};
 pub use mod_path::ModPath;
 pub use source_desc::{ModType, SourceFileDesc, SourceFileType};
 use visitor::SourceFinder;
@@ -26,7 +26,7 @@ fn propagate_parent_file(path: &Path, source_descs_slice: &mut [SourceFileDesc])
 fn visit_source(
     path: &Path,
     mut source_finder: SourceFinder,
-) -> Result<(Vec<SourceFileDesc>, Vec<Unresolved>)> {
+) -> Result<(Vec<SourceFileDesc>, Vec<Error>)> {
     let mut file = File::open(&path)?;
     let mut content = String::new();
     file.read_to_string(&mut content)?;
@@ -42,7 +42,7 @@ fn visit_source(
     ))
 }
 
-pub fn process_source(source: &SourceFileDesc) -> Result<(Vec<SourceFileDesc>, Vec<Unresolved>)> {
+pub fn process_source(source: &SourceFileDesc) -> Result<(Vec<SourceFileDesc>, Vec<Error>)> {
     let source_finder = match &source.file_type {
         SourceFileType::Bytes | SourceFileType::String => return Ok((vec![], vec![])),
         SourceFileType::RustSnippet(mod_stack) => SourceFinder::new(mod_stack.clone()),

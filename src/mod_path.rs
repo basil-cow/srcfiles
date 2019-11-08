@@ -1,7 +1,7 @@
-use crate::error::Unresolved;
 use std::path::{Path, PathBuf};
 use syn::{Attribute, Ident, ItemMod, Lit, Meta};
 
+use crate::error::Error;
 use crate::source_desc::{ModType, SourceFileDesc, SourceFileType};
 
 #[derive(Debug, Clone)]
@@ -91,7 +91,7 @@ impl ModStack {
         }
     }
 
-    pub fn resolve_mod_path(&self) -> Result<ModPath, Vec<Unresolved>> {
+    pub fn resolve_mod_path(&self) -> Result<ModPath, Vec<Error>> {
         let candidates = self.get_mod_path_candidates();
 
         for i in &candidates {
@@ -103,7 +103,7 @@ impl ModStack {
         Err(candidates
             .into_iter()
             .map(|path| path.into())
-            .map(Unresolved::MissingFile)
+            .map(Error::MissingFile)
             .collect())
     }
 }
@@ -114,7 +114,7 @@ impl From<Vec<ModSegment>> for ModStack {
     }
 }
 
-fn parse_possible_path(attr: &Attribute) -> Option<Result<PathBuf, Unresolved>> {
+fn parse_possible_path(attr: &Attribute) -> Option<Result<PathBuf, Error>> {
     if let Ok(Meta::NameValue(name_value)) = attr.parse_meta() {
         let attr_path = &name_value.path.segments;
         if attr_path.len() == 1 && attr_path.first().unwrap().ident == "path" {
@@ -127,7 +127,7 @@ fn parse_possible_path(attr: &Attribute) -> Option<Result<PathBuf, Unresolved>> 
     None
 }
 
-pub fn get_possible_segments(item_mod: &ItemMod) -> (Vec<ModSegment>, Vec<Unresolved>) {
+pub fn get_possible_segments(item_mod: &ItemMod) -> (Vec<ModSegment>, Vec<Error>) {
     let possible_path_attrs: Vec<_> = item_mod
         .attrs
         .iter()

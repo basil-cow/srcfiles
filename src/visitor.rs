@@ -2,13 +2,17 @@ use std::path::PathBuf;
 use syn::{visit::Visit, ItemMod, LitStr, Macro};
 
 use crate::common::ToTokenString;
-use crate::error::Unresolved;
+use crate::error::Error;
 use crate::mod_path::{ModPath, ModSegment, ModStack};
 use crate::source_desc::{SourceFileDesc, SourceFileType};
 
+mod cfg_if;
+
+use cfg_if::{CfgExpr, CfgIf};
+
 pub struct SourceFinder {
     pub source_candidates: Vec<SourceFileDesc>,
-    pub unresolved_items: Vec<Unresolved>,
+    pub unresolved_items: Vec<Error>,
     pub mod_stack: ModStack,
 }
 
@@ -25,11 +29,27 @@ impl SourceFinder {
         }
     }
 
-    pub fn push(&mut self, result: Result<SourceFileDesc, Vec<Unresolved>>) {
+    pub fn push(&mut self, result: Result<SourceFileDesc, Vec<Error>>) {
         match result {
             Ok(source_file_desc) => self.source_candidates.push(source_file_desc),
             Err(unresolved) => self.unresolved_items.extend(unresolved),
         }
+    }
+
+    fn visit_cfg_if(&mut self, node: &CfgIf) {
+        self.visit_block(&node.then_branch);
+
+        if let Some((_, cfg_expr_box)) = &node.else_branch {
+            match cfg_expr_box.as_ref() {
+                CfgExpr::Block(block) => self.visit_block(block),
+                CfgExpr::If(cfg_if) => self.visit_cfg_if(cfg_if),
+            }
+        }
+    }
+
+    pub fn process_cfg_if(&mut self, node: &Macro) {
+        let cfg_if = node.parse_body::<CfgIf>().unwrap();
+        self.visit_cfg_if(&cfg_if);
     }
 }
 
@@ -57,6 +77,11 @@ impl<'ast> Visit<'ast> for SourceFinder {
     fn visit_macro(&mut self, node: &'ast Macro) {
         let macro_ident = node.path.segments.last().unwrap().ident.to_string();
 
+        if macro_ident.as_str() == "cfg_if" {
+            self.process_cfg_if(node);
+            return;
+        }
+
         let source_type = match macro_ident.as_str() {
             "include_str" => SourceFileType::String,
             "include_bytes" => SourceFileType::Bytes,
@@ -73,7 +98,7 @@ impl<'ast> Visit<'ast> for SourceFinder {
                 .join(path.value()),
             Err(_) => {
                 self.unresolved_items
-                    .push(Unresolved::IncludeArgument(node.to_token_string()));
+                    .push(Error::UnresolvedIncludeArg(node.to_token_string()));
                 return;
             }
         };
@@ -84,7 +109,7 @@ impl<'ast> Visit<'ast> for SourceFinder {
             self.source_candidates.push(source_file_desc);
         } else {
             self.unresolved_items
-                .push(Unresolved::MissingFile(source_file_desc));
+                .push(Error::MissingFile(source_file_desc));
         }
     }
 }
