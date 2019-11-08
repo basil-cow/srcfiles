@@ -31,7 +31,7 @@ fn assert_missing_files(srcfiles: &[SourceError], path: &str) {
 #[test]
 fn simple_test() {
     let (srcfiles, errors) =
-        srcfiles::crate_srcfiles(PathBuf::from("test_projects/simple/src/main.rs"));
+        srcfiles::crate_srcfiles(PathBuf::from("test_projects/simple/src/main.rs")).unwrap_err();
 
     assert_eq!(srcfiles.len(), 7);
     assert_has_source(&srcfiles, "test_projects/simple/src/main.rs");
@@ -52,7 +52,7 @@ fn simple_test() {
 #[test]
 fn path_attr_test() {
     let (srcfiles, errors) =
-        srcfiles::crate_srcfiles(PathBuf::from("test_projects/paths/src/main.rs"));
+        srcfiles::crate_srcfiles(PathBuf::from("test_projects/paths/src/main.rs")).unwrap_err();
 
     assert_eq!(srcfiles.len(), 7);
     assert_has_source(&srcfiles, "test_projects/paths/src/main.rs");
@@ -70,26 +70,12 @@ fn path_attr_test() {
 
 #[test]
 fn inline_mods_test() {
-    let (srcfiles, errors) =
-        srcfiles::crate_srcfiles(PathBuf::from("test_projects/inline/src/lib.rs"));
+    let srcfiles =
+        srcfiles::crate_srcfiles(PathBuf::from("test_projects/inline/src/lib.rs")).unwrap();
     assert_eq!(srcfiles.len(), 5);
     assert_has_source(&srcfiles, "test_projects/inline/src/lib.rs");
     assert_has_source(&srcfiles, "test_projects/inline/g/mod.rs");
     assert_has_source(&srcfiles, "test_projects/inline/g/h.rs");
     assert_has_source(&srcfiles, "test_projects/inline/src/a/c/d/mod.rs");
     assert_has_source(&srcfiles, "test_projects/inline/src/a/c/e/e/e.rs");
-    assert_eq!(errors.len(), 0);
-}
-
-#[test]
-fn include_test() {
-    let (srcfiles, errors) =
-        srcfiles::crate_srcfiles(PathBuf::from("test_projects/inline/src/lib.rs"));
-    assert_eq!(srcfiles.len(), 5);
-    assert_has_source(&srcfiles, "test_projects/inline/src/lib.rs");
-    assert_has_source(&srcfiles, "test_projects/inline/g/mod.rs");
-    assert_has_source(&srcfiles, "test_projects/inline/g/h.rs");
-    assert_has_source(&srcfiles, "test_projects/inline/src/a/c/d/mod.rs");
-    assert_has_source(&srcfiles, "test_projects/inline/src/a/c/e/e/e.rs");
-    assert_eq!(errors.len(), 0);
 }

@@ -54,11 +54,15 @@ pub fn process_source(source: &SourceFileDesc) -> Result<(Vec<SourceFileDesc>, V
     Ok(visit_source(&source.path, source_finder)?)
 }
 
-pub fn crate_srcfiles(path: PathBuf) -> (Vec<SourceFileDesc>, Vec<SourceError>) {
+pub fn crate_srcfiles(
+    path: PathBuf,
+) -> std::result::Result<Vec<SourceFileDesc>, (Vec<SourceFileDesc>, Vec<SourceError>)> {
     mod_srcfiles(ModPath::new(path, ModType::ModRs))
 }
 
-pub fn mod_srcfiles(mod_path: ModPath) -> (Vec<SourceFileDesc>, Vec<SourceError>) {
+pub fn mod_srcfiles(
+    mod_path: ModPath,
+) -> std::result::Result<Vec<SourceFileDesc>, (Vec<SourceFileDesc>, Vec<SourceError>)> {
     let mut source_queue = Vec::with_capacity(100);
     let mut srcfiles = Vec::with_capacity(100);
     let mut errors = Vec::with_capacity(100);
@@ -85,5 +89,9 @@ pub fn mod_srcfiles(mod_path: ModPath) -> (Vec<SourceFileDesc>, Vec<SourceError>
         }
     }
 
-    (srcfiles, errors)
+    if errors.is_empty() {
+        Ok(srcfiles)
+    } else {
+        Err((srcfiles, errors))
+    }
 }
