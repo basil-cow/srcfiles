@@ -16,12 +16,12 @@ pub enum Error {
 }
 
 #[derive(Debug)]
-pub struct SrcError {
+pub struct SourceError {
     pub file: PathBuf,
     pub error: Error,
 }
 
-impl SrcError {
+impl SourceError {
     pub fn new(file: PathBuf, error: Error) -> Self {
         Self { file, error }
     }
