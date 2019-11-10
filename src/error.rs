@@ -1,6 +1,5 @@
 use crate::source_desc::SourceFileDesc;
 use std::fmt;
-use std::path::PathBuf;
 
 #[derive(Debug)]
 pub enum Error {
