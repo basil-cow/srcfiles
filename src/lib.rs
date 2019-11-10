@@ -10,12 +10,10 @@ use std::path::{Path, PathBuf};
 
 use syn::visit::Visit;
 
-pub use error::{Error, SourceError};
+pub use error::{Error, SourcesAndErrors};
 pub use mod_path::ModPath;
 pub use source_desc::{ModType, SourceFileDesc, SourceFileType};
 use visitor::SourceFinder;
-
-use error::Result;
 
 fn propagate_parent_file(path: &Path, source_descs_slice: &mut [SourceFileDesc]) {
     for source_desc in source_descs_slice {
@@ -26,7 +24,7 @@ fn propagate_parent_file(path: &Path, source_descs_slice: &mut [SourceFileDesc])
 fn visit_source(
     path: &Path,
     mut source_finder: SourceFinder,
-) -> Result<(Vec<SourceFileDesc>, Vec<Error>)> {
+) -> Result<(Vec<SourceFileDesc>, Vec<Error>), Error> {
     let mut file = File::open(&path)?;
     let mut content = String::new();
     file.read_to_string(&mut content)?;
@@ -42,7 +40,7 @@ fn visit_source(
     ))
 }
 
-pub fn process_source(source: &SourceFileDesc) -> Result<(Vec<SourceFileDesc>, Vec<Error>)> {
+pub fn process_source(source: &SourceFileDesc) -> Result<(Vec<SourceFileDesc>, Vec<Error>), Error> {
     let source_finder = match &source.file_type {
         SourceFileType::Bytes | SourceFileType::String => return Ok((vec![], vec![])),
         SourceFileType::RustSnippet(mod_stack) => SourceFinder::new(mod_stack.clone()),
@@ -54,18 +52,13 @@ pub fn process_source(source: &SourceFileDesc) -> Result<(Vec<SourceFileDesc>, V
     Ok(visit_source(&source.path, source_finder)?)
 }
 
-pub fn crate_srcfiles(
-    path: PathBuf,
-) -> std::result::Result<Vec<SourceFileDesc>, (Vec<SourceFileDesc>, Vec<SourceError>)> {
+pub fn crate_srcfiles(path: PathBuf) -> Result<Vec<SourceFileDesc>, SourcesAndErrors> {
     mod_srcfiles(ModPath::new(path, ModType::ModRs))
 }
 
-pub fn mod_srcfiles(
-    mod_path: ModPath,
-) -> std::result::Result<Vec<SourceFileDesc>, (Vec<SourceFileDesc>, Vec<SourceError>)> {
+pub fn mod_srcfiles(mod_path: ModPath) -> Result<Vec<SourceFileDesc>, SourcesAndErrors> {
     let mut source_queue = Vec::with_capacity(100);
-    let mut srcfiles = Vec::with_capacity(100);
-    let mut errors = Vec::with_capacity(100);
+    let mut result = SourcesAndErrors::new(vec![]);
 
     source_queue.push(SourceFileDesc::new(
         mod_path.path,
@@ -77,21 +70,15 @@ pub fn mod_srcfiles(
         match process_source(&source) {
             Ok((sources, src_errors)) => {
                 source_queue.extend(sources);
-                errors.extend(
-                    src_errors
-                        .into_iter()
-                        .map(Into::into)
-                        .map(|err| SourceError::new(source.path.clone(), err)),
-                );
-                srcfiles.push(source);
+                result.sources.push((source, src_errors));
             }
-            Err(err) => errors.push(SourceError::new(source.path, err)),
+            Err(error) => result.sources.push((source, vec![error])),
         }
     }
 
-    if errors.is_empty() {
-        Ok(srcfiles)
+    if result.sources.iter().all(|x| x.1.is_empty()) {
+        Ok(result.into_sources())
     } else {
-        Err((srcfiles, errors))
+        Err(result)
     }
 }

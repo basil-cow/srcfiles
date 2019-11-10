@@ -15,16 +15,8 @@ fn main() {
         }
     };
 
-    let (srcfiles, errors) = match crate_srcfiles(filename.into()) {
-        Ok(srcfiles) => (srcfiles, vec![]),
-        Err(x) => x,
+    match crate_srcfiles(filename.into()) {
+        Ok(srcfiles) => println!("{:?}", srcfiles),
+        Err(srcfiles_with_errors) => println!("{}", srcfiles_with_errors),
     };
-
-    for i in srcfiles {
-        println!("{:?}", i);
-    }
-
-    for i in errors {
-        println!("{:?}", i);
-    }
 }

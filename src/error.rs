@@ -1,5 +1,6 @@
 use crate::source_desc::SourceFileDesc;
-use std::{fmt, path::PathBuf};
+use std::fmt;
+use std::path::PathBuf;
 
 #[derive(Debug)]
 pub enum Error {
@@ -11,16 +12,54 @@ pub enum Error {
 }
 
 #[derive(Debug)]
-pub struct SourceError {
-    pub file: PathBuf,
-    pub error: Error,
+pub struct SourcesAndErrors {
+    pub sources: Vec<(SourceFileDesc, Vec<Error>)>,
 }
 
-impl SourceError {
-    pub fn new(file: PathBuf, error: Error) -> Self {
-        Self { file, error }
+impl SourcesAndErrors {
+    pub fn new(sources: Vec<(SourceFileDesc, Vec<Error>)>) -> Self {
+        Self { sources }
+    }
+
+    pub fn into_sources(self) -> Vec<SourceFileDesc> {
+        self.sources.into_iter().map(|x| x.0).collect()
+    }
+
+    pub fn into_errors(self) -> Vec<(SourceFileDesc, Error)> {
+        let mut result = vec![];
+
+        for i in self.sources {
+            let source_desc = i.0;
+            result.extend(i.1.into_iter().map(|x| (source_desc.clone(), x)));
+        }
+
+        result
+    }
+
+    pub fn get_sources(&self) -> Vec<SourceFileDesc> {
+        self.sources.iter().map(|x| x.0.clone()).collect()
     }
 }
+
+impl fmt::Display for SourcesAndErrors {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for i in &self.sources {
+            if i.1.is_empty() {
+                writeln!(f, "{}", i.0.path.display())?;
+            } else {
+                writeln!(f, "Errors in {}: ", i.0.path.display())?;
+
+                for err in &i.1 {
+                    writeln!(f, "{:2}", err)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl std::error::Error for SourcesAndErrors {}
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

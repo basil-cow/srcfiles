@@ -1,6 +1,6 @@
 use srcfiles;
 
-use srcfiles::{error::Error, SourceError, SourceFileDesc};
+use srcfiles::{error::Error, SourceFileDesc};
 use std::path::PathBuf;
 
 fn assert_has_source(srcfiles: &[SourceFileDesc], path: &str) {
@@ -13,11 +13,11 @@ fn assert_has_source(srcfiles: &[SourceFileDesc], path: &str) {
     );
 }
 
-fn assert_missing_files(srcfiles: &[SourceError], path: &str) {
+fn assert_missing_files(errors: &[(SourceFileDesc, Error)], path: &str) {
     assert!(
-        srcfiles
+        errors
             .iter()
-            .map(|src_err| &src_err.error)
+            .map(|error| &error.1)
             .flat_map(|err| if let Error::MissingFile(desc) = err {
                 Some(desc)
             } else {
@@ -30,9 +30,9 @@ fn assert_missing_files(srcfiles: &[SourceError], path: &str) {
 
 #[test]
 fn simple_test() {
-    let (srcfiles, errors) =
+    let result =
         srcfiles::crate_srcfiles(PathBuf::from("test_projects/simple/src/main.rs")).unwrap_err();
-
+    let (srcfiles, errors) = (result.get_sources(), result.into_errors());
     assert_eq!(srcfiles.len(), 7);
     assert_has_source(&srcfiles, "test_projects/simple/src/main.rs");
     assert_has_source(&srcfiles, "test_projects/simple/src/a.rs");
@@ -51,8 +51,9 @@ fn simple_test() {
 
 #[test]
 fn path_attr_test() {
-    let (srcfiles, errors) =
+    let result =
         srcfiles::crate_srcfiles(PathBuf::from("test_projects/paths/src/main.rs")).unwrap_err();
+    let (srcfiles, errors) = (result.get_sources(), result.into_errors());
 
     assert_eq!(srcfiles.len(), 7);
     assert_has_source(&srcfiles, "test_projects/paths/src/main.rs");
